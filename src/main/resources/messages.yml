@@ -1,0 +1,16 @@
+sidebar:
+  title: "&6&l⚡ Server Stats"
+  tps: "&eTPS: &f{tps}"
+  ping: "&bPing: &f{ping}ms"
+  cpu_sys: "&6CPU(Σ): &f{value}%"
+  cpu_proc: "&6CPU(Proc): &f{value}%"
+  ram_sys: "&aRAM(Σ): &f{used}/{total}"
+  ram_jvm: "&aRAM(JVM): &f{used}/{total}"
+  disk: "&dDisk: &f{used}/{total}"
+
+toggle:
+  enabled: "&aStatus scoreboard enabled"
+  disabled: "&cStatus scoreboard disabled"
+
+autodisable:
+  deop: "&cServer stats disabled (you are no longer an operator)."

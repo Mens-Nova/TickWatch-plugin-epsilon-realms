@@ -3,6 +3,8 @@ package com.epsilonrealms.tickwatch.scoreboard;
 import com.epsilonrealms.tickwatch.util.ChatUtil;
 import com.epsilonrealms.tickwatch.util.ColorScaleUtil;
 import com.epsilonrealms.tickwatch.util.MetricsUtil;
+import com.epsilonrealms.tickwatch.util.MessagesUtil;
+
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -11,6 +13,7 @@ import org.bukkit.scoreboard.*;
 
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @SuppressWarnings("deprecation")
@@ -88,11 +91,11 @@ public class ScoreboardManager {
 
         long sysTot = MetricsUtil.systemMemTotalBytes();
         long sysUsed = MetricsUtil.systemMemUsedBytes();
-        double sysRamRatio = sysTot > 0 ? (double) sysUsed / (double) sysTot : 0.0;
+        // double sysRamRatio = sysTot > 0 ? (double) sysUsed / (double) sysTot : 0.0;
 
         long jvmUsed = MetricsUtil.jvmHeapUsedBytes();
         long jvmMax = MetricsUtil.jvmHeapMaxBytes();
-        double jvmRamRatio = jvmMax > 0 ? (double) jvmUsed / (double) jvmMax : 0.0;
+        // double jvmRamRatio = jvmMax > 0 ? (double) jvmUsed / (double) jvmMax : 0.0;
 
         long diskUsed = MetricsUtil.diskUsedBytes(diskBase);
         long diskTot = MetricsUtil.diskTotalBytes(diskBase);
@@ -101,22 +104,35 @@ public class ScoreboardManager {
         int line = 9;
         
         objective.getScore(ChatUtil.format("&7")).setScore(line--);
-        objective.getScore(ChatUtil.format("&eTPS: ") + ColorScaleUtil.tpsColor(tps) + String.format("%.2f",tps)).setScore(line--);
-        objective.getScore(ChatUtil.format("&bPing: &f") + ping + "ms").setScore(line--);
 
-        if(sysCpu >= 0) {
-            objective.getScore(ChatUtil.format("&6CPU: ") + ColorScaleUtil.cpuColor(sysCpu) + sysCpu + "%").setScore(line--);
+        objective.getScore(MessagesUtil.get("sidebar.tps", Map.of("tps", String.format("%.2f", tps)))).setScore(line--);
+        objective.getScore(MessagesUtil.get("sidebar.ping", Map.of("ping", ping + ""))).setScore(line--);
+
+        if(plugin.getConfig().getBoolean("show.cpu", true) && procCpu >= 0) {
+            objective.getScore(MessagesUtil.get("sidebar.cpu_sys", Map.of("value", String.valueOf(sysCpu)))).setScore(line--);
         }
 
-        if(procCpu >= 0) {
-            objective.getScore(ChatUtil.format("&6CPU(proc): &f" + procCpu + "%")).setScore(line--);
+        if(plugin.getConfig().getBoolean("show.cpu", true) && procCpu >= 0) {
+            objective.getScore(MessagesUtil.get("sidebar.cpu_proc", Map.of("value", String.valueOf(procCpu)))).setScore(line--);
         }
 
-        objective.getScore(ChatUtil.format("&aRAM: ") + ColorScaleUtil.ramColor(sysRamRatio) + MetricsUtil.fmtBytesGB(sysUsed) + "/" + MetricsUtil.fmtBytesMB(jvmMax)).setScore(line--);
-        objective.getScore(ChatUtil.format("&aRAM(JVM): ") + ColorScaleUtil.ramColor(jvmRamRatio) + MetricsUtil.fmtBytesMB(jvmUsed) + "/" + MetricsUtil.fmtBytesMB(jvmMax)).setScore(line--);
+        if(plugin.getConfig().getBoolean("show.ram", true)) {
+            objective.getScore(MessagesUtil.get("sidebar.ram_sys", Map.of(
+                "used", MetricsUtil.fmtBytesGB(sysUsed),
+                "total", MetricsUtil.fmtBytesGB(sysTot)
+            ))).setScore(line--);
 
-        if(diskTot > 0) {
-            objective.getScore(ChatUtil.format("&dDisk: &f") + MetricsUtil.fmtBytesGB(diskUsed) + "/" + MetricsUtil.fmtBytesGB(diskTot)).setScore(line--);
+            objective.getScore(MessagesUtil.get("sidebar.ram_jvm", Map.of(
+                "used", MetricsUtil.fmtBytesMB(jvmUsed),
+                "total", MetricsUtil.fmtBytesMB(jvmMax)
+            ))).setScore(line--);
+        }
+
+        if(plugin.getConfig().getBoolean("show.disk", true) && diskTot > 0) {
+            objective.getScore(MessagesUtil.get("sidebar.disk", Map.of(
+                "used", MetricsUtil.fmtBytesGB(diskUsed),
+                "total", MetricsUtil.fmtBytesGB(diskTot)
+            ))).setScore(line--);
         }
 
         player.setScoreboard(board);

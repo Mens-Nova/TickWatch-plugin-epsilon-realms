@@ -1,5 +1,5 @@
 name: TickWatchRealms
-version: 1.1.0
+version: ${project.version}
 main: com.epsilonrealms.tickwatch.Main
 api-version: 1.21.8
 description: Shows live TPS & Ping with toggleable sidebar (ops only)
