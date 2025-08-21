@@ -73,9 +73,20 @@ jobs:
           git tag -a "${TAG}" -m "Release ${TAG}"
           git push origin "${TAG}"
 
-      - name: Build
+      - name: Build (resilient)
         run: |
-          mvn -B -ntp -DskipTests clean package
+          rm -rf ~/.m2/repository/io/papermc/paper/paper-api || true
+          for i in 1 2 3; do
+            mvn -B -ntp -U -DskipTests \
+              -Dmaven.wagon.http.retryHandler.count=3 \
+              -Dmaven.wagon.http.pool=false \
+              -Dorg.apache.maven.wagon.http.timeout=60000 \
+              -Dorg.apache.maven.wagon.http.connectionTimeout=60000 \
+              clean package && break || {
+                echo "Intento $i falló, reintentando tras $((i*20))s…"
+                sleep $((i*20))
+              }
+          done
 
       - name: Resolve coordinates
         id: coords
