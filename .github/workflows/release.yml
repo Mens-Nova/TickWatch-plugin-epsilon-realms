@@ -33,19 +33,35 @@ jobs:
           java-version: '21'
           cache: 'maven'
 
-      - name: Determine version/tag (manual)
+      # Manual: compute next patch version from latest v* tag (defaults to 1.1.0 if none)
+      - name: Determine next version/tag (manual)
         id: ver_manual
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          VERSION="1.1.0"
-          TAG="v${VERSION}"
-          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
-            echo "El tag ${TAG} ya existe."
-            exit 1
+          git fetch --tags --force
+          BASE="1.1.0"
+          LATEST_TAG="$(git tag -l 'v*' | sed 's/^v//' | sort -V | tail -n1)"
+          if [ -z "$LATEST_TAG" ]; then
+            VERSION="$BASE"
+          else
+            IFS='.' read -r MA MI PA <<EOF
+          $LATEST_TAG
+          EOF
+            PA=$((PA+1))
+            VERSION="${MA}.${MI}.${PA}"
           fi
+          # ensure uniqueness (loop if collision)
+          while git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; do
+            IFS='.' read -r MA MI PA <<EOF
+          $VERSION
+          EOF
+            PA=$((PA+1))
+            VERSION="${MA}.${MI}.${PA}"
+          done
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
 
+      # Tag push: use provided tag/version
       - name: Determine version/tag (tag push)
         id: ver_tag
         if: ${{ github.event_name == 'push' }}
@@ -55,6 +71,7 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
+      # Manual: bump pom.xml to computed version and tag
       - name: Bump POM (manual)
         if: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
@@ -78,11 +95,8 @@ jobs:
         env:
           MAVEN_OPTS: "-Dorg.slf4j.simpleLogger.showDateTime=true -Djava.net.preferIPv4Stack=true"
         run: |
-          echo "Probing Paper repo…"
           curl -sSf -I https://repo.papermc.io/repository/maven-public/ >/dev/null || echo "Paper repo probe failed (continuing)…"
-          echo "Cleaning cached paper-api metadata…"
           rm -rf ~/.m2/repository/io/papermc/paper/paper-api || true
-          echo "Maven version:"
           mvn -v
           for i in 1 2 3; do
             echo "=== Maven attempt $i ==="
